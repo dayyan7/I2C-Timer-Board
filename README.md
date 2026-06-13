@@ -3,7 +3,8 @@
 A custom-designed embedded timer built on the Arduino Nano ESP32, featuring a physical 
 potentiometer, tactile buttons, a 0.96" OLED display, LED signaling, and an audible 
 buzzer alert. Developed through a full hardware design cycle — schematic capture, custom 
-PCB layout, and manufacturing through JLCPCB — using KiCad.
+PCB layout, and manufacturing through JLCPCB — using KiCad. The design and firmware logic 
+were fully tested and confirmed in Tinkercad simulation prior to fabrication.
 
 ---
 
@@ -34,6 +35,15 @@ The project was built through a complete development cycle: schematic design in 
 custom PCB layout, fabrication by JLCPCB, and firmware written in C++ using the Arduino 
 IDE. Every component is intentionally selected and placed to serve a specific purpose.
 
+The system behavior and core firmware logic were first validated in Tinkercad simulation 
+to confirm correct functionality before moving into PCB manufacturing.
+
+The physical PCB was not fully soldered, meaning there was no complete electrical continuity 
+during hardware testing. This was intentional, as the primary goal of the fabrication stage 
+was to focus on KiCad workflow development, PCB design quality, and layout optimization 
+rather than full hardware assembly. Despite this, the circuit design and firmware behavior 
+were confirmed to be correct through Tinkercad simulation prior to fabrication.
+
 ---
 
 ## Features
@@ -56,202 +66,125 @@ I2C communication with the OLED, and GPIO control for every input and output on 
 
 ### Component Reference
 
-| Reference | Component       | Value | Function                              |
-|-----------|-----------------|-------|---------------------------------------|
-| A1        | Arduino Nano ESP32 | —  | Microcontroller                       |
-| J1        | OLED Connector  | 4-pin | I2C display (VCC / GND / SCL / SDA)   |
-| D1        | LED             | Green | Flashes briefly when Start is pressed |
-| D2        | LED             | Red   | Flashes briefly when Stop is pressed  |
-| D3        | LED             | White | Power indicator, top-left corner      |
-| D4        | LED             | White | Power indicator, top-right corner     |
-| BZ1       | Buzzer          | —     | Audible alert on countdown completion |
-| SW1       | Tactile Button  | —     | Increment seconds                     |
-| SW2       | Tactile Button  | —     | Start timer                           |
-| SW3       | Tactile Button  | —     | Stop / End timer                      |
-| RV1       | Potentiometer   | —     | Set minutes (analog input)            |
-| C1        | Capacitor       | 0.1µF | Decoupling / noise filtering          |
-| C2        | Capacitor       | 10µF  | Buzzer current reservoir              |
-| Q1 – Q5   | NPN Transistor  | —     | LED and buzzer switching              |
-| R1 – R4   | Resistor        | 220Ω  | LED current limiting                  |
-| R5 – R9   | Resistor        | 1kΩ   | Transistor base resistors             |
-
-### User Controls
-
-**RV1 — Minutes Potentiometer:** Analog input for coarse minute selection. Turning the 
-knob maps directly to a minute value, making it much faster to set longer countdowns 
-than using repeated button presses.
-
-**SW1 — Seconds Button:** Increments the second value for fine-tuned timer adjustments.
-
-**SW2 — Start:** Initiates the countdown. Triggers a brief green LED flash as confirmation.
-
-**SW3 — Stop / End:** Halts the countdown at any point. Triggers a brief red LED flash 
-as a stop signal.
-
-### LED Indicators
-
-**D1 (Green):** Brief flash when the timer is started.
-
-**D2 (Red):** Brief flash when the timer is stopped.
-
-**D3 & D4 (White):** Positioned in the top two corners flanking the OLED display. These 
-remain on as long as the board is receiving 3.3V, serving as power indicators.
+| Reference | Component           | Value | Function                              |
+|-----------|--------------------|-------|---------------------------------------|
+| A1        | Arduino Nano ESP32 | —     | Microcontroller                       |
+| J1        | OLED Connector     | 4-pin | I2C display (VCC / GND / SCL / SDA)   |
+| D1        | LED                | Green | Flash when Start is pressed           |
+| D2        | LED                | Red   | Flash when Stop is pressed            |
+| D3        | LED                | White | Power indicator                       |
+| D4        | LED                | White | Power indicator                       |
+| BZ1       | Buzzer             | —     | Audible alert                         |
+| SW1       | Tactile Button     | —     | Increment seconds                     |
+| SW2       | Tactile Button     | —     | Start timer                           |
+| SW3       | Tactile Button     | —     | Stop timer                            |
+| RV1       | Potentiometer      | —     | Set minutes (analog input)            |
+| C1        | Capacitor          | 0.1µF | Decoupling                            |
+| C2        | Capacitor          | 10µF  | Buzzer current buffer                 |
+| Q1–Q5     | NPN Transistor     | —     | LED + buzzer switching                |
+| R1–R4     | Resistor           | 220Ω  | LED current limiting                  |
+| R5–R9     | Resistor           | 1kΩ   | Base resistors                        |
 
 ---
 
 ## How It Works
 
-The firmware runs two core states: **idle (clock mode)** and **active (timer mode)**.
+The firmware runs two modes: **idle (clock mode)** and **active (timer mode)**.
 
-On power-up, the board enters idle mode. The OLED pulls the current date and time and 
-displays it as a running clock. Nothing else is active until the user begins setting a 
-timer.
+On startup, the OLED displays real-time date and time. When the user sets a duration 
+using the potentiometer and buttons, pressing start switches the system into countdown mode.
 
-When the user adjusts **RV1**, the analog input is read and mapped to a minute value. 
-**SW1** handles any fine second adjustments on top of that. Once the desired time is set, 
-pressing **SW2** transitions the board from idle to timer mode, displays the countdown on 
-the OLED, and flashes **D1** as confirmation.
+During countdown:
+- OLED updates live
+- LEDs indicate state changes
+- Buzzer triggers at zero
 
-During the countdown, the display updates in real time. Pressing **SW3** at any point 
-exits timer mode, flashes **D2**, and returns the board to idle. If the countdown reaches 
-zero without interruption, the Arduino sends a PWM signal to **Q5**, which drives **BZ1** 
-to produce an audible alert tone.
+Pressing stop exits back to idle mode immediately.
 
-The OLED communicates with the Arduino over **I2C** using the SDA and SCL lines. All 
-LED outputs are switched through NPN transistors rather than driven directly from GPIO 
-pins, which keeps the current load off the microcontroller entirely.
+Communication with the OLED uses I2C (SDA/SCL). All outputs are transistor-driven to 
+protect the microcontroller.
 
 ---
 
 ## Schematic Design
 
-The schematic was created in *KiCad 9.0.7*. Each subsystem is logically separated: 
-LED drive circuitry on the left, the Arduino Nano ESP32 at the center, the buzzer 
-circuit on the right, and passive inputs (buttons, potentiometer, OLED) routed into 
-their respective GPIO and analog pins.
+Designed in KiCad 9.0.7 with clear subsystem separation:
 
-**LED Drive Circuit:** Each LED is switched through an NPN transistor (Q1–Q4) rather 
-than driven directly from a GPIO pin. A 220Ω resistor in series with each LED limits 
-current, and a 1kΩ base resistor on each transistor sets the switching threshold. This 
-keeps current draw off the microcontroller and protects the output pins from overdrive.
+- LEDs driven through NPN transistors
+- Buttons wired to digital inputs with ground reference
+- Potentiometer connected to analog input
+- OLED connected via I2C
+- Buzzer driven using PWM through transistor Q5
 
-**Buzzer Circuit:** BZ1 is switched by Q5 with R5 as the base resistor. The Arduino 
-sends a PWM signal to Q5's base, which switches the buzzer on to produce the alert 
-tone. C2 (10µF) sits across the buzzer supply to handle inrush current during 
-activation and prevent voltage sag on the 3.3V rail.
+Each LED includes a 220Ω resistor, and each transistor base uses a 1kΩ resistor for safe switching.
 
-**Input Circuitry:** SW1, SW2, and SW3 are tactile switches with one leg tied to GND, 
-read as digital inputs on the Arduino. RV1 is wired between 3.3V and GND with its 
-wiper feeding into an analog input pin for minute selection. The OLED connects over 
-I2C through the SDA/A4 and SCL/A5 pins.
-
-**Decoupling:** C1 (0.1µF) is placed close to the Arduino's 3.3V supply pin to filter 
-high-frequency switching noise and keep the supply rail stable.
-
-<img width="542" height="390" alt="Image" src="https://github.com/user-attachments/assets/751d345d-9680-4d3d-8154-dcac6ccd7f75" />
+A 0.1µF decoupling capacitor stabilizes the microcontroller power rail.
 
 ---
 
 ## PCB Design
 
-The PCB was designed in *KiCad* and manufactured by **JLCPCB** as a two-layer board.
+Manufactured by JLCPCB as a two-layer PCB.
 
-**Front Layer:** Contains all component placements and the 3.3V power traces. Traces 
-route from the Arduino to each peripheral: the OLED connector, LED transistor bases, 
-button inputs, potentiometer wiper, and buzzer driver. Components are grouped by 
-function — input controls (RV1, SW1) sit in the lower section, while output and display 
-components (OLED, LEDs, buzzer) occupy the upper portion of the board.
+- Front layer: component routing and signal traces
+- Back layer: full ground plane for noise reduction and stability
 
-**Back Layer:** A full copper ground pour covers the back of the board. This provides a 
-low-impedance return path for all signals, reduces EMI, and improves overall signal 
-integrity. Traces that could not be completed on the front layer are routed through via 
-holes and connected with short runs on the back.
+Design prioritizes:
+- Short I2C trace length
+- Separated power and signal regions
+- Clean grounding via copper pour
 
-**Layout Decisions:** The buzzer and C2 are placed on the right side to keep the 
-switching circuitry away from the I2C signal lines running to the OLED. The Arduino 
-sits at the bottom with the USB port accessible at the board edge for programming and 
-power. The OLED connector (J1) is centrally positioned to keep I2C trace lengths short.
-
-<img width="294" height="423" alt="Image" src="https://github.com/user-attachments/assets/6a6f89bf-1c50-467d-80c2-c18c8f27645a" />
-
-**3D Views**
-
-<img width="304" height="439" alt="Image" src="https://github.com/user-attachments/assets/290cabc9-8447-4586-b611-76094ca5f599" />
-<img width="304" height="439" alt="Image" src="https://github.com/user-attachments/assets/fc7e3ecb-3d04-4fca-9fb0-20c1a068181b" />
+At prototype stage, the board was not fully soldered, resulting in incomplete electrical 
+continuity during physical testing. However, full circuit behavior and firmware logic 
+were validated in Tinkercad simulation prior to fabrication.
 
 ---
 
 ## Power Management & Audio
 
-The board runs entirely on **3.3V**, supplied through the Arduino Nano ESP32's onboard 
-regulator via USB.
+Powered via USB through the Arduino Nano ESP32 (3.3V system).
 
-**C1 (0.1µF):** A decoupling capacitor placed close to the microcontroller's supply 
-rail. It filters high-frequency switching noise that could cause erratic behavior or 
-false reads on the input pins.
+- C1 filters high-frequency noise
+- C2 stabilizes buzzer current spikes
+- PWM signal controls buzzer tone and timing
 
-**C2 (10µF):** Placed across the buzzer supply line. When the buzzer activates, it 
-draws a quick burst of current. Without this capacitor, that inrush could cause a brief 
-voltage sag on the 3.3V rail and risk resetting the microcontroller. C2 acts as a local 
-charge reservoir, absorbing that demand without disturbing the rest of the circuit.
-
-**Buzzer (BZ1):** Driven via PWM through Q5. The frequency and duty cycle of the signal 
-determine the pitch and volume of the tone. The alert fires when the countdown reaches 
-zero, giving an audible signal even when the user is not watching the display.
+The buzzer activates at countdown completion, providing audible feedback even without display visibility.
 
 ---
 
 ## Usage
 
-1. Power the board by connecting the Arduino Nano ESP32 via USB
-2. The OLED will display the current date and time in idle mode
-3. Turn **RV1** to dial in the desired number of minutes
-4. Press **SW1** to fine-tune the seconds if needed
-5. Press **SW2 (Start)** to begin the countdown — **D1 (Green)** will flash briefly as confirmation
-6. Press **SW3 (Stop)** at any time to halt the timer — **D2 (Red)** will flash briefly
-7. When the countdown reaches zero, **BZ1** fires an audible alert tone
+1. Power via USB
+2. OLED shows clock
+3. Set time using potentiometer
+4. Adjust seconds if needed
+5. Press start
+6. Press stop anytime to reset
+7. Alarm triggers at zero
 
 ---
 
 ## Design Philosophy
 
-The goal was straightforward: build a focused physical timer that does not require a 
-phone. Phone timers work, but they come with the friction of unlocking a screen and the 
-temptation to check everything else on it. This board removes that entirely. There is 
-one job, and every part on it serves that job.
+This project removes reliance on phone-based timers and replaces it with a dedicated physical interface.
 
-The potentiometer was a deliberate choice over a simple button pair. Dialing in a time 
-feels faster and more natural, especially for common use cases like study sessions, 
-cooking intervals, or workout breaks. The physical controls give the device a tactile 
-quality that a touchscreen does not replicate.
+The potentiometer allows fast time setting, while buttons provide fine control. Every component exists for a functional reason, emphasizing practical embedded system design rather than abstraction.
 
-From an engineering standpoint, going from a hand-wired prototype to a manufactured PCB 
-was the most important step in the project. Copper traces eliminate the reliability 
-issues that come with jumper wires, the form factor is more compact, and the layout is 
-repeatable. Designing in KiCad and fabricating through JLCPCB made this a practical 
-exercise in the full hardware development cycle, from schematic capture all the way to 
-a physical board.
+Moving from simulation (Tinkercad) to PCB fabrication through KiCad and JLCPCB demonstrates a full embedded development workflow from concept to hardware implementation.
 
 ---
 
 ## Images
 
 **Schematic**
-
-<img width="542" height="390" alt="Image" src="https://github.com/user-attachments/assets/751d345d-9680-4d3d-8154-dcac6ccd7f75" />
-
----
+<img src="https://github.com/user-attachments/assets/751d345d-9680-4d3d-8154-dcac6ccd7f75" />
 
 **PCB Layout**
-
-<img width="294" height="423" alt="Image" src="https://github.com/user-attachments/assets/6a6f89bf-1c50-467d-80c2-c18c8f27645a" />
-
----
+<img src="https://github.com/user-attachments/assets/6a6f89bf-1c50-467d-80c2-c18c8f27645a" />
 
 **3D Views**
-
-<img width="304" height="439" alt="Image" src="https://github.com/user-attachments/assets/290cabc9-8447-4586-b611-76094ca5f599" />
-<img width="304" height="439" alt="Image" src="https://github.com/user-attachments/assets/fc7e3ecb-3d04-4fca-9fb0-20c1a068181b" />
+<img src="https://github.com/user-attachments/assets/290cabc9-8447-4586-b611-76094ca5f599" />
+<img src="https://github.com/user-attachments/assets/fc7e3ecb-3d04-4fca-9fb0-20c1a068181b" />
 
 ---
 

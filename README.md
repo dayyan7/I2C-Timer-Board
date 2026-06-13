@@ -176,12 +176,15 @@ Moving from simulation (Tinkercad) to PCB fabrication through KiCad and JLCPCB d
 ## Images
 
 **Schematic**
+
 <img src="https://github.com/user-attachments/assets/751d345d-9680-4d3d-8154-dcac6ccd7f75" />
 
 **PCB Layout**
+
 <img src="https://github.com/user-attachments/assets/6a6f89bf-1c50-467d-80c2-c18c8f27645a" />
 
 **3D Views**
+
 <img src="https://github.com/user-attachments/assets/290cabc9-8447-4586-b611-76094ca5f599" />
 <img src="https://github.com/user-attachments/assets/fc7e3ecb-3d04-4fca-9fb0-20c1a068181b" />
 

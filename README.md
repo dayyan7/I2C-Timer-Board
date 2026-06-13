@@ -20,7 +20,6 @@ were fully tested and confirmed in Tinkercad simulation prior to fabrication.
 - [Usage](#usage)
 - [Design Philosophy](#design-philosophy)
 - [Images](#images)
-- [Physical Final Product](#physical-final-product)
 
 ---
 
